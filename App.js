@@ -6,29 +6,29 @@ import Login from "./app/screens/Login";
 import Users from "./app/screens/Users";
 import Chat from "./app/screens/Chat";
 
-const instanceLocatorId = "YOUR INSTANCE LOCATOR ID";
-const presenceRoomId = YOUR_GENERAL_ROOM_ID; // room ID of the general room created through the chatKit inspector
-const chatServer = "http://YOUR_INTERNAL_IP:3000/users";
+const instanceLocatorId = "0c189a30-bee2-488b-a6db-6797b29c25f2";
+const presenceRoomId = 19385067; // room ID of the general room created through the chatKit inspector
+const chatServer = "http://192.168.1.73/users";
 
 const tokenProvider = new TokenProvider({
-  url: `https://us1.pusherplatform.io/services/chatkit_token_provider/v1/${instanceLocatorId}/token`
+  url: `https://us1.pusherplatform.io/services/chatkit_token_provider/v1/0c189a30-bee2-488b-a6db-6797b29c25f2/token`
 });
 
 export default class App extends React.Component {
   state = {
-    userHasLoggedIn: false,
-    currentScreen: "login",
-    username: null,
-    users: [],
-    presenceRoomId: null,
-    currentRoomId: null,
-    chatWithUser: null,
-    message: "",
-    messages: [],
-    chatWithUserIsTyping: false,
-    refreshing: false,
-    inChatRoom: false
-  };
+    userHasLoggedIn: false, // whether the user is logged in or not
+    currentScreen: "login", // the current screen being shown, this defaults to the login screen
+    username: null, // the username of the current user
+    users: [], // the array of users returned by Chatkit
+    presenceRoomId: null, // the ID of the general room (we're simply copying it over to the state)
+    currentRoomId: null, // the ID of the current room
+    chatWithUser: null, // the username of the user you're currently chatting with
+    message: "", // the message you're currently typing
+    messages: [], // the array of messages currently being shown in the screen
+    chatWithUserIsTyping: false, // if the user you're chatting with is currently typing something or not
+    refreshing: false, // if the app is currently fetching the old messages or not
+    inChatRoom: false // if you're currently in a chat room or not
+    };
 
   constructor(props) {
     super(props);
@@ -92,25 +92,29 @@ export default class App extends React.Component {
         username: this.state.username
       })
     })
-      .then(response => {
+      .then(response => { // request succeeded
+        // initialize a ChatManager instance
         this.chatManager = new ChatManager({
           instanceLocator: `v1:us1:${instanceLocatorId}`,
           userId: this.state.username,
           tokenProvider
         });
 
+        // connect the user to Chatkit
         this.chatManager
           .connect()
           .then(currentUser => {
             this.currentUser = currentUser;
 
             this.setState({
-              presenceRoomId: presenceRoomId
+              presenceRoomId: presenceRoomId // save ID of the general room in the state
             });
 
+            // subscribe the user to the general room
             currentUser
               .subscribeToRoom({
                 roomId: presenceRoomId,
+                // action hooks. These functions will be executed when any of the four events below happens
                 hooks: {
                   onUserCameOnline: this.handleInUser,
                   onUserJoinedRoom: this.handleInUser,
@@ -196,31 +200,10 @@ export default class App extends React.Component {
     });
   };
 
-  backToUsers = () => {
-    this.currentUser
-      .leaveRoom({ roomId: this.roomId })
-      .then(room => {
-        this.currentUser.roomSubscriptions[this.roomId].cancel();
-
-        this.roomId = null;
-        this.chatWithUser = null;
-
-        this.setState({
-          currentScreen: "users",
-          messages: [],
-          currentRoomId: null,
-          chatWithUser: null,
-          inChatRoom: false
-        });
-      })
-      .catch(err => {
-        console.log(
-          `something went wrong while trying to leave the room: ${err}`
-        );
-      });
-  };
+  
 
   beginChat = user => {
+    // construct the room ID
     let roomName = [user.id, this.currentUser.id];
     roomName = roomName.sort().join("_") + "_room";
 
@@ -251,6 +234,7 @@ export default class App extends React.Component {
         console.log(`error getting joinable rooms: ${err}`);
       });
   };
+  // next: add subscribeToRoom function
 
   subscribeToRoom = (roomId, chatWith) => {
     this.roomId = roomId;
@@ -264,7 +248,7 @@ export default class App extends React.Component {
           onUserStartedTyping: this.onUserTypes,
           onUserStoppedTyping: this.onUserNotTypes
         },
-        messageLimit: 5
+        messageLimit: 5 // default number of messages to load after subscribing to the room
       })
       .then(room => {
         this.setState({
@@ -277,11 +261,12 @@ export default class App extends React.Component {
       });
 
     this.setState({
-      currentScreen: "chat",
+      currentScreen: "chat", // set current screen to Chat screen
       currentRoomId: roomId,
       chatWithUser: chatWith
     });
   };
+  // next: add onReceiveMessage function
 
   onReceiveMessage = message => {
     let isCurrentUser = this.currentUser.id == message.sender.id ? true : false;
@@ -292,7 +277,7 @@ export default class App extends React.Component {
       username: message.sender.name,
       msg: message.text,
       datetime: message.createdAt,
-      isCurrentUser
+      isCurrentUser // this one determines the styling used for the chat bubble
     });
 
     this.setState(
@@ -305,6 +290,8 @@ export default class App extends React.Component {
     );
   };
 
+  // next: add onUserTypes function
+
   onUserTypes = user => {
     this.setState({
       chatWithUserIsTyping: true
@@ -316,26 +303,33 @@ export default class App extends React.Component {
       chatWithUserIsTyping: false
     });
   };
-
-  leavePresenceRoom = () => {
+  backToUsers = () => {
     this.currentUser
-      .leaveRoom({ roomId: this.state.presenceRoomId })
+      .leaveRoom({ roomId: this.roomId })
       .then(room => {
-        this.currentUser.roomSubscriptions[this.state.presenceRoomId].cancel();
-        this.currentUser = null;
+        this.currentUser.roomSubscriptions[this.roomId].cancel(); // cancel all the room subscriptions
+
+        // reset the values
+        this.roomId = null;
+        this.chatWithUser = null;
+
         this.setState({
-          presenceRoomId: null,
-          users: [],
-          userHasLoggedIn: false,
-          currentScreen: "login"
+          currentScreen: "users",
+          messages: [],
+          currentRoomId: null,
+          chatWithUser: null,
+          inChatRoom: false
         });
       })
       .catch(err => {
         console.log(
-          `error leaving presence room ${this.state.presenceRoomId}: ${err}`
+          `something went wrong while trying to leave the room: ${err}`
         );
       });
   };
+
+  // next: add updateMessage function
+  
 
   updateMessage = message => {
     this.setState({
@@ -384,8 +378,7 @@ export default class App extends React.Component {
         let old_messages = [];
 
         messages.forEach(msg => {
-          let isCurrentUser =
-            this.currentUser.id == msg.sender.id ? true : false;
+          let isCurrentUser = this.currentUser.id == msg.sender.id ? true : false;
 
           old_messages.push({
             key: msg.id.toString(),
@@ -408,11 +401,31 @@ export default class App extends React.Component {
       });
   };
 
+  // next: add setScrollViewRef function
+
   setScrollViewRef = ref => {
     this.scrollViewRef = ref;
   };
 }
-
+leavePresenceRoom = () => {
+  this.currentUser
+    .leaveRoom({ roomId: this.state.presenceRoomId })
+    .then(room => {
+      this.currentUser.roomSubscriptions[this.state.presenceRoomId].cancel();
+      this.currentUser = null;
+      this.setState({
+        presenceRoomId: null,
+        users: [],
+        userHasLoggedIn: false,
+        currentScreen: "login"
+      });
+    })
+    .catch(err => {
+      console.log(
+        `error leaving presence room ${this.state.presenceRoomId}: ${err}`
+      );
+    });
+};
 const styles = StyleSheet.create({
   container: {
     flex: 1,

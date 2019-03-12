@@ -74,7 +74,6 @@ export default class Chat extends React.Component {
       </KeyboardAvoidingView>
     );
   }
-
   renderItem = ({ item }) => {
     let box_style = item.isCurrentUser ? 'current_user_msg' : 'other_user_msg';
     let username_style = item.isCurrentUser
@@ -96,7 +95,10 @@ export default class Chat extends React.Component {
       </View>
     );
   };
+  // next: add renderItem  
 }
+
+// previously added styles here..
 
 const styles = StyleSheet.create({
   container: {

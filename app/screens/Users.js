@@ -46,7 +46,6 @@ export default class Users extends React.Component {
       </View>
     );
   }
-
   renderItem = ({ item }) => {
     let online_style = item.is_online ? 'online' : 'offline';
 
@@ -66,6 +65,7 @@ export default class Users extends React.Component {
       </TouchableHighlight>
     );
   };
+  // next: add renderItem
 }
 
 const styles = StyleSheet.create({
